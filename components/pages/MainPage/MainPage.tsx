@@ -1,6 +1,7 @@
 import SkinView3D from "@/components/ui/skinview3d/skinView3D";
 import styles from "./MainPage.module.css";
-import Button from "@/components/ui/button/Button";
+import Button from "@/components/ui/components/button/Button";
+import SplashText from "@/components/ui/SplashText/SplashText";
 
 export default function MainPage() {
 
@@ -10,6 +11,12 @@ export default function MainPage() {
   return (
     <div className={styles.mainPage}>
         <div className={styles.bg} /> {/* Background */} 
+        <div className={styles.titleWrapper}>
+            <img src="/assets/ui/title.png" className={styles.title} alt="Block Game" />
+            <div className={styles.splashTextWrapper}>
+                <SplashText />
+            </div>
+        </div>
         <div className={styles.container}>
             <div className={styles.content}>
                 <div className={styles.contentLeft}>
