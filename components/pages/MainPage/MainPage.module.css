@@ -1,0 +1,56 @@
+.mainPage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.bg {
+  position: fixed;
+  top: -20px;
+  left: -20px;
+  height: calc(100vh + 40px);
+  width: calc(100vw + 40px);
+  background-image: url('/assets/background/cherry.jpg');
+  background-size: cover;
+  background-color: pink;
+  filter: blur(10px);
+  z-index: -1;
+}
+
+.container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.content {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.contentLeft {
+  display: flex;
+  min-width: 40%;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.contentRight {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+  flex: 1;
+}

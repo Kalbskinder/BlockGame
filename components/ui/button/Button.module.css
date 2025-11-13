@@ -1,0 +1,59 @@
+.mc-button {
+	height: var(--btn-size);
+	width: 100%;
+    max-width: 400px;
+    font-family: 'BG Regular', sans-serif;
+	cursor: pointer;
+	overflow: hidden;
+	white-space: nowrap;
+	user-select: none;
+
+    padding: 0;
+    margin: 0;
+
+	background: #999 url('https://i.ibb.co/rb2TWXL/bgbtn.png') center / cover;
+	image-rendering: pixelated;
+	border: 2px solid #000;
+}
+
+/* Mouse over */
+.mc-button:hover .title {
+	background-color: rgba(100, 100, 255, .45);
+	text-shadow: 2px 2px #202013CC;
+	color: #FFFFA0;
+}
+
+.mc-button:active .title {
+	box-shadow: inset -2px -4px #0004, inset 2px 2px #FFF5;
+}
+
+/* Button title */
+.mc-button .title {
+	width: 100%;
+	height: 100%;
+	padding-bottom: .3em;
+    padding-top: .1em;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+    font-size: 20px;
+	
+	color: #DDD;
+	text-shadow: 2px 2px #000A;
+	box-shadow: inset -2px -4px #0006, inset 2px 2px #FFF7;
+}
+
+/* Others */
+.mc-button.full {
+	width: 100%;
+	height: 100%;
+}
+
+.mc-button.lang img {
+	width: 26px;
+	height: 26px;
+}
+
+.mc-button.lang .title {
+	padding-bottom: 0;
+}
