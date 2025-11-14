@@ -6,12 +6,27 @@ interface InputProps {
     value?: string;
     minLength?: number;
     maxLength?: number;
+    disabled?: boolean;
 }
 
-export default function Input({ className, placeholder, value, minLength, maxLength }: InputProps) {
+export default function Input({  
+    className, 
+    placeholder = "", 
+    value = "", 
+    minLength, 
+    maxLength,
+    disabled = false,
+}: InputProps) {
     const inputClasses = [styles["mc-input"], className]
         .filter(Boolean)
         .join(" ");
 
-    return <input className={inputClasses} placeholder={placeholder} value={value} minLength={minLength} maxLength={maxLength} />;
+    return <input 
+        className={inputClasses} 
+        placeholder={placeholder} 
+        value={value} 
+        minLength={minLength} 
+        maxLength={maxLength} 
+        disabled={disabled}
+    />;
 }
