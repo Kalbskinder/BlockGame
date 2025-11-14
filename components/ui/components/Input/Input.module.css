@@ -1,0 +1,23 @@
+.mc-input {
+    background-color: rgba(0, 0, 0, 0.958);
+    border: none;
+    border: 1px solid #c0c0c0;
+    padding: 0.5rem 1rem 0.5rem 0.6rem;
+    color: white;
+    font-family: 'BG Regular', sans-serif;
+    font-size: 18px;
+    width: 100%;
+}
+
+.mc-input::placeholder {
+    color: #888;
+}
+
+.mc-input::selection {
+    background: white;
+    color: #7033ff;
+}
+
+.mc-input:focus {
+    outline: 1px solid #e8e8e8;
+}

@@ -20,7 +20,7 @@ export default function MainPage() {
         <div className={styles.container}>
             <div className={styles.content}>
                 <div className={styles.contentLeft}>
-                    <SkinView3D skin="/assets/skins/kalbskinder.png" />
+                    <SkinView3D skin="https://mineskin.eu/skin/Kalbskinder" />
                     <Button onClick={handleSkinChange} className="max-w-2">Change Skin</Button>
                 </div>
                 <div className={styles.contentRight}>
