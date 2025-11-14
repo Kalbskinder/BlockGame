@@ -11,6 +11,12 @@ export const splashTexts: SplashTextEntry[] = [
     { text: "Browser Edition", fontSize: 1.9 },
     { text: "Uhm... Guys?", fontSize: 2.0 },
     { text: "helloWorld(\"print\");", fontSize: 1.8 },
+    { text: "So blocky it hurts", fontSize: 1.8 },
+    { text: "Open Source!", fontSize: 2.0 },
+    { text: "Blocks > Spheres", fontSize: 1.9 },
+    { text: "no bugs!* (*probably)", fontSize: 1.8 },
+    
+    
 ];
 
 export const getRandomSplashText = (): SplashTextEntry => {
