@@ -7,6 +7,7 @@
     transform: rotate(-20deg);
     transform-origin: center;
     animation: splashTextWobble 0.27s ease-in-out infinite alternate;
+    user-select: none;
 }
 
 @keyframes splashTextWobble {

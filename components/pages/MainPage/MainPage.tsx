@@ -11,8 +11,8 @@ export default function MainPage() {
   return (
     <div className={styles.mainPage}>
         <div className={styles.bg} /> {/* Background */} 
-        <div className={styles.titleWrapper}>
-            <img src="/assets/ui/title.png" className={styles.title} alt="Block Game" />
+        <div className={`${styles.titleWrapper} select-none`}>
+            <img src="/assets/ui/title.png" className={`${styles.title} select-none`} alt="Block Game" />
             <div className={styles.splashTextWrapper}>
                 <SplashText />
             </div>

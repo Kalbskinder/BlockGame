@@ -5,9 +5,11 @@ import * as skinview3d from "skinview3d";
 
 interface SkinView3DProps {
     skin: string;
+    width?: number;
+    height?: number;
 }
 
-export default function SkinView3D({ skin }: SkinView3DProps) {
+export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView3DProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const viewerRef = useRef<skinview3d.SkinViewer | null>(null);
     const mousePositionRef = useRef({ x: 0, y: 0 });
@@ -17,9 +19,10 @@ export default function SkinView3D({ skin }: SkinView3DProps) {
 
         const viewer = new skinview3d.SkinViewer({
             canvas: canvasRef.current,
-            width: 200,
-            height: 300,
+            width: width,
+            height: height,
             skin: skin,
+            enableControls: false,
         });
 
         viewerRef.current = viewer;
