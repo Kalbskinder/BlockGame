@@ -2,7 +2,7 @@ import React from "react";
 import styles from "./Button.module.css";
 
 interface ButtonProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   onClick?: () => void;
   full?: boolean;
   lang?: boolean;

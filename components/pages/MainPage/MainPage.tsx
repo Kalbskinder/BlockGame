@@ -2,15 +2,23 @@ import SkinView3D from "@/components/ui/skinview3d/skinView3D";
 import styles from "./MainPage.module.css";
 import Button from "@/components/ui/components/button/Button";
 import SplashText from "@/components/ui/SplashText/SplashText";
+import { useState } from "react";
+import Modal from "@/components/ui/components/Modal/Modal";
+import Input from "@/components/ui/components/Input/Input";
 
 export default function MainPage() {
+    const [skinModal, setSkinModal] = useState(true);
+    const [username, setUsername] = useState("");
 
-    const handleSkinChange = () => {};
     const handlePlay = () => {};
 
   return (
     <div className={styles.mainPage}>
         <div className={styles.bg} /> {/* Background */} 
+        <Modal hidden={skinModal} onClose={() => setSkinModal(true)} >
+            <Input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Button>Update Skin</Button>
+        </Modal>
         <div className={`${styles.titleWrapper} select-none`}>
             <img src="/assets/ui/title.png" className={`${styles.title} select-none`} alt="Block Game" />
             <div className={styles.splashTextWrapper}>
@@ -21,7 +29,7 @@ export default function MainPage() {
             <div className={styles.content}>
                 <div className={styles.contentLeft}>
                     <SkinView3D skin="https://mineskin.eu/skin/Kalbskinder" />
-                    <Button onClick={handleSkinChange} className="max-w-2">Change Skin</Button>
+                    <Button onClick={() => setSkinModal(false)} className="max-w-2">Change Skin</Button>
                 </div>
                 <div className={styles.contentRight}>
                     <Button onClick={handlePlay}>Play</Button>

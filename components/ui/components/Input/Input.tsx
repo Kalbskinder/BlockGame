@@ -7,21 +7,24 @@ interface InputProps {
     minLength?: number;
     maxLength?: number;
     disabled?: boolean;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export default function Input({  
     className, 
     placeholder = "", 
-    value = "", 
+    value, 
     minLength, 
     maxLength,
     disabled = false,
+    onChange
 }: InputProps) {
     const inputClasses = [styles["mc-input"], className]
         .filter(Boolean)
         .join(" ");
 
-    return <input 
+    return <input
+        onChange={onChange}
         className={inputClasses} 
         placeholder={placeholder} 
         value={value} 
