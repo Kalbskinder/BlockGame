@@ -1,4 +1,4 @@
-import { SplashTextEntry } from "../types/models";
+import { SplashTextEntry } from "../../src/types/models";
 
 export const splashTexts: SplashTextEntry[] = [
     { text: "Block Game!", fontSize: 2.2 },

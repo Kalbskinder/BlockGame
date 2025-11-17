@@ -2,23 +2,69 @@ import SkinView3D from "@/components/ui/skinview3d/skinView3D";
 import styles from "./MainPage.module.css";
 import Button from "@/components/ui/components/button/Button";
 import SplashText from "@/components/ui/SplashText/SplashText";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "@/components/ui/components/Modal/Modal";
 import Input from "@/components/ui/components/Input/Input";
+import { LocalStorageHandler } from "@/src/utils/localStorageUtil";
+import { WorldUtils } from "@/src/utils/worldUtils";
+import { WorldStorage } from "@/src/utils/worldStorage";
 
 export default function MainPage() {
     const [skinModal, setSkinModal] = useState(true);
     const [usernameInput, setUsernameInput] = useState("");
     const [username, setUsername] = useState("Kalbskinder");
 
-    const handlePlay = () => {};
+    async function handlePlay () {
+        try {
+            const worldId = await LocalStorageHandler.get("worldId");
+            if (worldId) {
+                console.log("Loading world with ID:", worldId);
+                // Load existing world from localStorage
+                const worldData = await WorldStorage.loadWorld(worldId);
+                if (worldData) {
+                    console.log("World loaded:", worldData);
+                } else {
+                    console.log("World not found in storage");
+                }
+            } else {
+                // Create new world
+                const newWorldId = WorldUtils.randomWorldId();
+                const seed = WorldUtils.randomSeed();
+                const emptyWorldData = { blocks: [], seed };
+                
+                // Save to localStorage
+                WorldStorage.saveWorld(newWorldId, emptyWorldData, seed);
+                
+                // Save worldId to localStorage
+                LocalStorageHandler.save("worldId", newWorldId);
+                console.log("Creating new world with ID:", newWorldId, "Seed:", seed);
+            }
+        } catch (error) {
+            console.error("Error handling world ID:", error);
+        }
+    };
 
     const handleUsernameChange = () => {
         if (usernameInput.trim() !== "") {
             setUsername(usernameInput.trim());
             setSkinModal(true);
+            LocalStorageHandler.save("username", usernameInput.trim());
         }
     }
+
+    useEffect(() => {
+        const loadUsername = async () => {
+            const savedUsername = await LocalStorageHandler.get("username");
+            if (savedUsername) {
+                setUsername(savedUsername);
+                setUsernameInput(savedUsername);
+            } else {
+                setUsername("Kalbskinder");
+                setUsernameInput("Kalbskinder");
+            }
+        };
+        loadUsername();
+    }, []);
 
   return (
     <div className={styles.mainPage}>
@@ -36,7 +82,7 @@ export default function MainPage() {
         <div className={styles.container}>
             <div className={styles.content}>
                 <div className={styles.contentLeft}>
-                    <SkinView3D skin={`https://mineskin.eu/skin/${username}`} />
+                    <SkinView3D key={username} skin={`https://mineskin.eu/skin/${username}`} />
                     <Button onClick={() => setSkinModal(false)} className="max-w-2">Change Skin</Button>
                 </div>
                 <div className={styles.contentRight}>

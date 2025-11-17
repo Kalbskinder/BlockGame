@@ -18,32 +18,31 @@ export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView
     useEffect(() => {
         if (!canvasRef.current) return;
 
+        if (!viewerRef.current) {
+            const viewer = new skinview3d.SkinViewer({
+                canvas: canvasRef.current,
+                width,
+                height,
+                enableControls: false,
+            });
+
+            viewer.animation = new skinview3d.IdleAnimation();
+            viewer.animation.speed = 1;
+
+            viewerRef.current = viewer;
+        }
+
         setIsLoading(true);
 
-        const viewer = new skinview3d.SkinViewer({
-            canvas: canvasRef.current,
-            width: width,
-            height: height,
-            skin: skin,
-            enableControls: false,
-        });
-
-        viewerRef.current = viewer;
-
-        // Apply idle animation
-        viewer.animation = new skinview3d.IdleAnimation();
-        viewer.animation.speed = 1;
-
-        // Wait for skin to load
-        viewer.loadSkin(skin).then(() => {
-            setIsLoading(false);
-        }).catch((error) => {
-            console.error("Failed to load skin:", error);
-            setIsLoading(false);
-        });
+        viewerRef.current.loadSkin(skin)
+            .then(() => setIsLoading(false))
+            .catch(err => {
+                console.error("Failed to load skin:", err);
+                setIsLoading(false);
+            });
 
         return () => {
-            viewer.dispose();
+            viewerRef.current?.dispose();
             viewerRef.current = null;
         };
     }, [skin]);
