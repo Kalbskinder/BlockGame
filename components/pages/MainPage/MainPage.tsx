@@ -82,7 +82,7 @@ export default function MainPage() {
         <div className={styles.container}>
             <div className={styles.content}>
                 <div className={styles.contentLeft}>
-                    <SkinView3D key={username} skin={`https://mineskin.eu/skin/${username}`} />
+                    <SkinView3D key={username} username={username} />
                     <Button onClick={() => setSkinModal(false)} className="max-w-2">Change Skin</Button>
                 </div>
                 <div className={styles.contentRight}>

@@ -4,16 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import * as skinview3d from "skinview3d";
 
 interface SkinView3DProps {
-    skin: string;
+    username: string;
     width?: number;
     height?: number;
 }
 
-export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView3DProps) {
+export default function SkinView3D({ username, width = 200, height = 300 }: SkinView3DProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const viewerRef = useRef<skinview3d.SkinViewer | null>(null);
     const mousePositionRef = useRef({ x: 0, y: 0 });
     const [isLoading, setIsLoading] = useState(true);
+    const skin = "https://mineskin.eu/skin/" + username;
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -95,19 +96,6 @@ export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView
             document.removeEventListener("scroll", handleScroll);
         };
     }, []);
-
-    async function loadCape(uuid: string) {
-        const url = `https://crafatar.com/capes/${uuid}`;
-        const res = await fetch(url);
-        if (res.status === 400) {
-            viewerRef.current?.loadCape(null);
-        } else if (res.ok) {
-            viewerRef.current?.loadCape(url);
-        } else {
-            console.warn(`User ${uuid} has no cape.`)
-            viewerRef.current?.loadCape(null);
-        }
-    }
 
     return (
         <div style={{ position: 'relative', width: `${width}px`, height: `${height}px` }}>
