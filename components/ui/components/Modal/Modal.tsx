@@ -19,7 +19,14 @@ export default function Modal({ children, hidden, onClose }: ModalProps) {
     
     return (
         <div className={styles["bg-modal"]} onClick={handleBackgroundClick}>
-            <div className={styles["modal-content"]}>{children}</div>
+            <div className={styles["modal-content"]}>
+                {onClose && (
+                    <button className={styles["close-button"]} onClick={onClose}>
+                        ✕
+                    </button>
+                )}
+                {children}
+            </div>
         </div>
     );
 }

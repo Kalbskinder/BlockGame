@@ -17,7 +17,7 @@
     background-repeat: repeat;
     padding: 80px;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border: 2px solid #00000054;
     max-width: 90%;
     max-height: 90%;
     min-width: 300px;
@@ -28,4 +28,30 @@
     justify-content: center;
     gap: 20px;
     overflow-y: auto;
+    position: relative;
+}
+
+.close-button {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    padding: 5px 10px;
+    line-height: 1;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    transition: all 0.1s;
+    font-family: monospace;
+}
+
+.close-button:hover {
+    color: #ededed;
+}
+
+.close-button:active {
+    transform: scale(0.95);
 }
