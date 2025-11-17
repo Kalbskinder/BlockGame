@@ -1,5 +1,6 @@
 .bg-modal {
     background-color: rgba(0, 0, 0, 0.5);
+    background-repeat: repeat;
     position: fixed;
     top: 0;
     left: 0;
@@ -12,11 +13,19 @@
 }
 
 .bg-modal .modal-content {
-    background-color: #1a1a1a;
-    padding: 20px;
+    background: url('/assets/background/dirt.png');
+    background-repeat: repeat;
+    padding: 80px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     max-width: 90%;
     max-height: 90%;
+    min-width: 300px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
     overflow-y: auto;
 }

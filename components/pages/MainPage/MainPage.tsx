@@ -8,16 +8,24 @@ import Input from "@/components/ui/components/Input/Input";
 
 export default function MainPage() {
     const [skinModal, setSkinModal] = useState(true);
-    const [username, setUsername] = useState("");
+    const [usernameInput, setUsernameInput] = useState("");
+    const [username, setUsername] = useState("Kalbskinder");
 
     const handlePlay = () => {};
+
+    const handleUsernameChange = () => {
+        if (usernameInput.trim() !== "") {
+            setUsername(usernameInput.trim());
+            setSkinModal(true);
+        }
+    }
 
   return (
     <div className={styles.mainPage}>
         <div className={styles.bg} /> {/* Background */} 
         <Modal hidden={skinModal} onClose={() => setSkinModal(true)} >
-            <Input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <Button>Update Skin</Button>
+            <Input placeholder="Username" value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} />
+            <Button onClick={handleUsernameChange}>Update Skin</Button>
         </Modal>
         <div className={`${styles.titleWrapper} select-none`}>
             <img src="/assets/ui/title.png" className={`${styles.title} select-none`} alt="Block Game" />
@@ -28,7 +36,7 @@ export default function MainPage() {
         <div className={styles.container}>
             <div className={styles.content}>
                 <div className={styles.contentLeft}>
-                    <SkinView3D skin="https://mineskin.eu/skin/Kalbskinder" />
+                    <SkinView3D skin={`https://mineskin.eu/skin/${username}`} />
                     <Button onClick={() => setSkinModal(false)} className="max-w-2">Change Skin</Button>
                 </div>
                 <div className={styles.contentRight}>
