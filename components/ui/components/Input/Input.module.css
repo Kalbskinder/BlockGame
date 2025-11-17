@@ -11,6 +11,7 @@
 
 .mc-input::placeholder {
     color: #888;
+    user-select: none;
 }
 
 .mc-input::selection {
