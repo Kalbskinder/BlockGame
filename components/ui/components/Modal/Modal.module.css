@@ -9,10 +9,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;   
+    z-index: 1000;
 }
 
-.bg-modal .modal-content {
+.modal-content {
     background: url('/assets/background/dirt.png');
     background-repeat: repeat;
     padding: 80px;
@@ -28,6 +28,7 @@
     justify-content: center;
     gap: 20px;
     overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
 }
 
@@ -50,8 +51,4 @@
 
 .close-button:hover {
     color: #ededed;
-}
-
-.close-button:active {
-    transform: scale(0.95);
 }
