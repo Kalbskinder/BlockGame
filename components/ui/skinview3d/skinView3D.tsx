@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as skinview3d from "skinview3d";
 
 interface SkinView3DProps {
@@ -13,9 +13,12 @@ export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const viewerRef = useRef<skinview3d.SkinViewer | null>(null);
     const mousePositionRef = useRef({ x: 0, y: 0 });
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (!canvasRef.current) return;
+
+        setIsLoading(true);
 
         const viewer = new skinview3d.SkinViewer({
             canvas: canvasRef.current,
@@ -30,6 +33,14 @@ export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView
         // Apply idle animation
         viewer.animation = new skinview3d.IdleAnimation();
         viewer.animation.speed = 1;
+
+        // Wait for skin to load
+        viewer.loadSkin(skin).then(() => {
+            setIsLoading(false);
+        }).catch((error) => {
+            console.error("Failed to load skin:", error);
+            setIsLoading(false);
+        });
 
         return () => {
             viewer.dispose();
@@ -100,8 +111,37 @@ export default function SkinView3D({ skin, width = 200, height = 300 }: SkinView
     }
 
     return (
-        <div>
-            <canvas ref={canvasRef}></canvas>
+        <div style={{ position: 'relative', width: `${width}px`, height: `${height}px` }}>
+            {isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10,
+                    borderRadius: '4px'
+                }}>
+                    <div style={{
+                        border: '4px solid rgba(255, 255, 255, 0.3)',
+                        borderTop: '4px solid white',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        animation: 'spin 1s linear infinite'
+                    }} />
+                </div>
+            )}
+            <canvas ref={canvasRef} style={{ opacity: isLoading ? 0.3 : 1, transition: 'opacity 0.3s' }}></canvas>
+            <style jsx>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }
