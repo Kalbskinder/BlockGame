@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { WorldGeneration } from '@/src/rendering/WorldGeneration';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { EscapeScreen } from '../ui/game/EscapeScreen/EscapeScreen';
 
 export default function GameCanvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -12,19 +13,33 @@ export default function GameCanvas() {
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<PointerLockControls | null>(null);
+    const [escOpened, setEscOpened] = useState(false);
+    
+    // Player movement
+    const moveState = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+        jump: false,
+        canJump: false,
+    };
+
+    const handleEscapeClose = () => {
+        setEscOpened(false);
+        moveState.backward = false;
+        moveState.forward = false;
+        moveState.left = false;
+        moveState.right = false;
+        moveState.jump = false;
+        // Use setTimeout to avoid lock conflicts
+        setTimeout(() => {
+            controlsRef.current?.lock();
+        }, 100);
+    }
 
     useEffect(() => {
         if (!canvasRef.current) return;
-
-        // Player movement
-        const moveState = {
-            forward: false,
-            backward: false,
-            left: false,
-            right: false,
-            jump: false,
-            canJump: false,
-        };
 
         const velocity = new THREE.Vector3();
         const direction = new THREE.Vector3();
@@ -34,6 +49,7 @@ export default function GameCanvas() {
         const GRAVITY = 30;
         const JUMP_VELOCITY = 10;
         const MOVE_SPEED = 5;
+        const RENDER_DISTANCE = 2;
         const MOVE_ACCELERATION = 50; // How fast you accelerate
         const MOVE_DAMPING = 0.85; // How fast you decelerate (lower = more slippery)
         const STEP_HEIGHT = 0.5; // Maximum step height player can walk up
@@ -56,6 +72,11 @@ export default function GameCanvas() {
         // Pointer Lock Controls
         const controls = new PointerLockControls(camera, document.body);
         controlsRef.current = controls;
+
+        // Handle pointer lock change
+        controls.addEventListener('unlock', () => {
+            setEscOpened(true);
+        });
 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({
@@ -131,19 +152,22 @@ export default function GameCanvas() {
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', onKeyUp);
 
-        // Click to lock pointer
-        const onClick = () => {
-            controls.lock();
+        // Click to lock pointer (only when escape menu is closed)
+        const onClick = (e: MouseEvent) => {
+            // Check if click is on canvas
+            if (e.target === canvasRef.current && !controls.isLocked) {
+                controls.lock();
+            }
         };
-        document.addEventListener('click', onClick);
+        canvasRef.current.addEventListener('click', onClick);
 
         // Generate world chunks
         const worldChunks = new Map<string, THREE.Group>();
         
         const loadWorld = async () => {
             try {
-                for (let cx = -6; cx < 6; cx++) {
-                    for (let cz = -6; cz < 6; cz++) {
+                for (let cx = -RENDER_DISTANCE; cx < RENDER_DISTANCE; cx++) {
+                    for (let cz = -RENDER_DISTANCE; cz < RENDER_DISTANCE; cz++) {
                         const chunk = await WorldGeneration.generateChunk(cx, cz);
                         scene.add(chunk);
                         worldChunks.set(`${cx},${cz}`, chunk);
@@ -257,7 +281,9 @@ export default function GameCanvas() {
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('keydown', onKeyDown);
             document.removeEventListener('keyup', onKeyUp);
-            document.removeEventListener('click', onClick);
+            if (canvasRef.current) {
+                canvasRef.current.removeEventListener('click', onClick);
+            }
             document.body.removeChild(stats.dom);
             renderer.dispose();
         };
@@ -265,6 +291,7 @@ export default function GameCanvas() {
 
     return (
         <div>
+            {escOpened && <EscapeScreen onClose={handleEscapeClose} />}
             <canvas
                 ref={canvasRef}
                 style={{

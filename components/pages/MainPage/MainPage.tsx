@@ -1,6 +1,6 @@
 import SkinView3D from "@/components/ui/skinview3d/skinView3D";
 import styles from "./MainPage.module.css";
-import Button from "@/components/ui/components/button/Button";
+import Button from "@/components/ui/components/Button/Button";
 import SplashText from "@/components/ui/SplashText/SplashText";
 import { useEffect, useState } from "react";
 import Modal from "@/components/ui/components/Modal/Modal";
