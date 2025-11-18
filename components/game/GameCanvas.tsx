@@ -195,7 +195,7 @@ export default function GameCanvas() {
                 return intersects[0].point.y + PLAYER_COLLISION_OFFSET;
             }
             
-            return 32; // Default height if no terrain found
+            return -Infinity; // No terrain = fall forever
         };
 
         // Animation loop
