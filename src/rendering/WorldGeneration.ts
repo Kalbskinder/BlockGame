@@ -38,7 +38,8 @@ export class WorldGeneration {
         };
         
         const noise = new SimplexNoise({ random: seededRandom });
-
+        const heightMap = new Map<string, number>();
+        
         // Create merged geometries for each block type
         const grassGeometry = new THREE.BoxGeometry(1, 1, 1);
         const dirtGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -54,6 +55,7 @@ export class WorldGeneration {
                 const worldZ = chunkZ * CHUNK_SIZE + z;
 
                 const height = Math.floor(noise.noise(worldX * NOISE_HEIGHT_SCALE, worldZ * 0.05) * 3 + 32);
+                heightMap.set(`${worldX},${worldZ}`, height);
 
                 for (let y = 0; y < height; y++) {
                     const matrix = new THREE.Matrix4();
@@ -109,6 +111,9 @@ export class WorldGeneration {
             stoneBlocks.forEach((matrix, i) => stoneMesh.setMatrixAt(i, matrix));
             chunkGroup.add(stoneMesh);
         }
+
+        chunkGroup.userData = chunkGroup.userData || {};
+        chunkGroup.userData.heightMap = heightMap;
 
         return chunkGroup;
     }
