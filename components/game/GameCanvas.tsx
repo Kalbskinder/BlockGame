@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { WorldGeneration } from '@/src/rendering/WorldGeneration';
+import { WorldGeneration, CHUNK_SIZE } from '@/src/rendering/WorldGeneration';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { EscapeScreen } from '../ui/game/EscapeScreen/EscapeScreen';
@@ -49,7 +49,7 @@ export default function GameCanvas() {
         const GRAVITY = 30;
         const JUMP_VELOCITY = 10;
         const MOVE_SPEED = 5;
-        const RENDER_DISTANCE = 2;
+        const RENDER_DISTANCE = 2; // in chunks, loads (2*R+1)^2 chunks around player
         const MOVE_ACCELERATION = 50; // How fast you accelerate
         const MOVE_DAMPING = 0.85; // How fast you decelerate (lower = more slippery)
         const STEP_HEIGHT = 0.5; // Maximum step height player can walk up
@@ -161,24 +161,87 @@ export default function GameCanvas() {
         };
         canvasRef.current.addEventListener('click', onClick);
 
-        // Generate world chunks
+        // Chunk streaming around player
         const worldChunks = new Map<string, THREE.Group>();
-        
-        const loadWorld = async () => {
-            try {
-                for (let cx = -RENDER_DISTANCE; cx < RENDER_DISTANCE; cx++) {
-                    for (let cz = -RENDER_DISTANCE; cz < RENDER_DISTANCE; cz++) {
-                        const chunk = await WorldGeneration.generateChunk(cx, cz);
-                        scene.add(chunk);
-                        worldChunks.set(`${cx},${cz}`, chunk);
+        const pendingLoads = new Set<string>();
+        const keyOf = (cx: number, cz: number) => `${cx},${cz}`;
+
+        let lastCenterChunkX = Number.POSITIVE_INFINITY;
+        let lastCenterChunkZ = Number.POSITIVE_INFINITY;
+
+        const isWithinRenderDistance = (cx: number, cz: number, centerX: number, centerZ: number) =>
+            Math.abs(cx - centerX) <= RENDER_DISTANCE && Math.abs(cz - centerZ) <= RENDER_DISTANCE;
+
+        const disposeChunk = (group: THREE.Group) => {
+            group.traverse((obj) => {
+                const mesh = obj as THREE.Mesh | THREE.InstancedMesh | any;
+                if ((mesh as any).isMesh || (mesh as any).isInstancedMesh) {
+                    if (mesh.geometry) {
+                        mesh.geometry.dispose();
+                    }
+                    const mat: any = mesh.material;
+                    if (Array.isArray(mat)) {
+                        mat.forEach((m) => m && typeof m.dispose === 'function' && m.dispose());
+                    } else if (mat && typeof mat.dispose === 'function') {
+                        mat.dispose();
+                    }
+                    if ((mesh as any).isInstancedMesh && typeof (mesh as any).dispose === 'function') {
+                        (mesh as any).dispose();
                     }
                 }
-            } catch (error) {
-                console.error('Failed to generate world:', error);
+            });
+        };
+
+        const scheduleChunkLoad = async (cx: number, cz: number) => {
+            const id = keyOf(cx, cz);
+            if (worldChunks.has(id) || pendingLoads.has(id)) return;
+            pendingLoads.add(id);
+            try {
+                const chunk = await WorldGeneration.generateChunk(cx, cz);
+                // Only add if still needed around current center
+                if (isWithinRenderDistance(cx, cz, lastCenterChunkX, lastCenterChunkZ)) {
+                    scene.add(chunk);
+                    worldChunks.set(id, chunk);
+                } else {
+                    // No longer needed
+                    disposeChunk(chunk);
+                }
+            } catch (e) {
+                console.error('Failed to load chunk', id, e);
+            } finally {
+                pendingLoads.delete(id);
             }
         };
 
-        loadWorld();
+        const ensureChunksForCenter = (centerX: number, centerZ: number) => {
+            lastCenterChunkX = centerX;
+            lastCenterChunkZ = centerZ;
+
+            // Determine which chunks should be present
+            const needed = new Set<string>();
+            for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
+                for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
+                    const cx = centerX + dx;
+                    const cz = centerZ + dz;
+                    needed.add(keyOf(cx, cz));
+                    scheduleChunkLoad(cx, cz);
+                }
+            }
+
+            // Unload chunks that are no longer needed
+            const toRemove: string[] = [];
+            worldChunks.forEach((group, id) => {
+                if (!needed.has(id)) {
+                    scene.remove(group);
+                    disposeChunk(group);
+                    toRemove.push(id);
+                }
+            });
+            toRemove.forEach((id) => worldChunks.delete(id));
+        };
+
+        // Initial load around origin (before player moves)
+        ensureChunksForCenter(0, 0);
 
         // Helper function to get terrain height at position
         const getTerrainHeight = (x: number, z: number): number => {
@@ -254,6 +317,13 @@ export default function GameCanvas() {
                 } else {
                     // We're in the air
                     moveState.canJump = false;
+                }
+
+                // Stream chunks when entering a new chunk
+                const currentChunkX = Math.floor(camera.position.x / CHUNK_SIZE);
+                const currentChunkZ = Math.floor(camera.position.z / CHUNK_SIZE);
+                if (currentChunkX !== lastCenterChunkX || currentChunkZ !== lastCenterChunkZ) {
+                    ensureChunksForCenter(currentChunkX, currentChunkZ);
                 }
             }
 

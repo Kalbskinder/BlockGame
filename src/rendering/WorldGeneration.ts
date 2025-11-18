@@ -4,7 +4,7 @@ import { WorldMetadata } from "../types/models";
 import * as THREE from "three";
 import { Block } from "./components/Block";
 
-const CHUNK_SIZE = 16;
+export const CHUNK_SIZE = 16;
 const NOISE_HEIGHT_SCALE = 0.045;
 const WORLD_HEIGHT = 64;
 
