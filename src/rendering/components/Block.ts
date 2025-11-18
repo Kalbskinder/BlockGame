@@ -25,6 +25,8 @@ export class Block {
 
             const materials = this.textures.map((tex) => {
                 const loadedTexture = this.textureLoader.load(tex);
+                loadedTexture.magFilter = THREE.NearestFilter;
+                loadedTexture.minFilter = THREE.NearestFilter;
                 return new THREE.MeshBasicMaterial({ map: loadedTexture });
             });
 
@@ -34,8 +36,15 @@ export class Block {
         } else {
             this.texture = texture;
             const loadedTexture = this.textureLoader.load(texture);
+            loadedTexture.magFilter = THREE.NearestFilter;
+            loadedTexture.minFilter = THREE.NearestFilter;
             const material = new THREE.MeshBasicMaterial({ map: loadedTexture });
             this.finalCube = new THREE.Mesh(cubeGeometry, material);
         }
     }
+
+    public get mesh(): THREE.Mesh {
+        return this.finalCube;
+    }
+
 }

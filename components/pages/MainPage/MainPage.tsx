@@ -23,6 +23,7 @@ export default function MainPage() {
                 const worldData = await WorldStorage.loadWorld(worldId);
                 if (worldData) {
                     console.log("World loaded:", worldData);
+                    window.location.href = "/play";
                 } else {
                     console.log("World not found in storage");
                 }
@@ -38,6 +39,7 @@ export default function MainPage() {
                 // Save worldId to localStorage
                 LocalStorageHandler.save("worldId", newWorldId);
                 console.log("Creating new world with ID:", newWorldId, "Seed:", seed);
+                window.location.href = "/play";
             }
         } catch (error) {
             console.error("Error handling world ID:", error);
