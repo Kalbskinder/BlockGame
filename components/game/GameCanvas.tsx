@@ -32,7 +32,6 @@ export default function GameCanvas() {
         moveState.left = false;
         moveState.right = false;
         moveState.jump = false;
-        // Use setTimeout to avoid lock conflicts
         setTimeout(() => {
             controlsRef.current?.lock();
         }, 100);
@@ -41,25 +40,30 @@ export default function GameCanvas() {
     useEffect(() => {
         if (!canvasRef.current) return;
 
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
+        /**
+         * Constants
+         */
         const PLAYER_HEIGHT = 1.8;
-        const PLAYER_RADIUS = 0.3; // Player collision radius
-        const PLAYER_COLLISION_OFFSET = 0.1; // Small offset to prevent clipping
+        const PLAYER_RADIUS = 0.3; 
+        const PLAYER_COLLISION_OFFSET = 0.001; 
+        const BLOCK_SIZE = 1;
+        const BLOCK_HALF = BLOCK_SIZE / 2;
         const GRAVITY = 30;
-        const JUMP_VELOCITY = 10;
-        const MOVE_SPEED = 5;
-        const RENDER_DISTANCE = 2; // in chunks, loads (2*R+1)^2 chunks around player
-        const MOVE_ACCELERATION = 50; // How fast you accelerate
-        const MOVE_DAMPING = 0.85; // How fast you decelerate (lower = more slippery)
-        const STEP_HEIGHT = 0.5; // Maximum step height player can walk up
+        const JUMP_VELOCITY = 8.5;
+        const RENDER_DISTANCE = 2;
+        const STEP_HEIGHT = 0.5; 
+        
+        const MAX_SPEED = 4.0;
+        const ACCELERATION = 40.0;
+        const FRICTION = 25.0; 
 
-        // Scene setup
+        /**
+         * Scene setup
+         */
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         sceneRef.current = scene;
 
-        // Camera setup
         const camera = new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
@@ -69,16 +73,10 @@ export default function GameCanvas() {
         camera.position.set(0, 35, 0);
         cameraRef.current = camera;
 
-        // Pointer Lock Controls
         const controls = new PointerLockControls(camera, document.body);
         controlsRef.current = controls;
+        controls.addEventListener('unlock', () => setEscOpened(true));
 
-        // Handle pointer lock change
-        controls.addEventListener('unlock', () => {
-            setEscOpened(true);
-        });
-
-        // Renderer setup
         const renderer = new THREE.WebGLRenderer({
             canvas: canvasRef.current,
             antialias: true,
@@ -87,20 +85,21 @@ export default function GameCanvas() {
         renderer.setPixelRatio(window.devicePixelRatio);
         rendererRef.current = renderer;
 
-        // FPS Stats
         const stats = new Stats();
         stats.showPanel(0);
         document.body.appendChild(stats.dom);
 
-        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
-
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(50, 100, 50);
         scene.add(directionalLight);
 
-        // Keyboard controls
+        /**
+         * Input and velocity
+         */
+        const velocity = new THREE.Vector3(0, 0, 0);
+
         const onKeyDown = (event: KeyboardEvent) => {
             switch (event.code) {
                 case 'ArrowUp':
@@ -152,9 +151,7 @@ export default function GameCanvas() {
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', onKeyUp);
 
-        // Click to lock pointer (only when escape menu is closed)
         const onClick = (e: MouseEvent) => {
-            // Check if click is on canvas
             if (e.target === canvasRef.current && !controls.isLocked) {
                 controls.lock();
             }
@@ -243,80 +240,306 @@ export default function GameCanvas() {
         // Initial load around origin (before player moves)
         ensureChunksForCenter(0, 0);
 
-        // Helper function to get terrain height at position
-        const getTerrainHeight = (x: number, z: number): number => {
-            // Use raycaster to detect terrain height
-            const raycaster = new THREE.Raycaster();
-            raycaster.set(
-                new THREE.Vector3(x, 100, z),
-                new THREE.Vector3(0, -1, 0)
-            );
-
-            const intersects = raycaster.intersectObjects(scene.children, true);
-            
-            if (intersects.length > 0) {
-                return intersects[0].point.y + PLAYER_COLLISION_OFFSET;
-            }
-            
-            return -Infinity; // No terrain = fall forever
+        /**
+         * Fast block queries
+         */
+        const blockAt = (bx: number, by: number, bz: number): boolean => {
+            const key = `${bx},${bz}`;
+            const height = globalHeightMap.get(key);
+            if (height === undefined) return false;
+            return by >= 0 && by < height;
+        };
+        const getColumnTopFaceY = (x: number, z: number): number | null => {
+            const key = `${Math.floor(x + 0.5)},${Math.floor(z + 0.5)}`;
+            const h = globalHeightMap.get(key);
+            if (h === undefined) return null;
+            return h - BLOCK_HALF;
         };
 
-        // Animation loop
+        /**
+         * AABB helper utilities
+         */
+        const overlapOnAxis = (amin: number, amax: number, bmin: number, bmax: number) => {
+            return Math.max(0, Math.min(amax, bmax) - Math.max(amin, bmin));
+        };
+
+        /**
+         * Core collision: per-axis movement with AABB checks against nearby blocks
+         */
+
+        const tryMoveAABB = (delta: THREE.Vector3) => {
+            // Horizontal movement X
+            if (delta.x !== 0) {
+                const targetX = camera.position.x + delta.x;
+                const minX = targetX - PLAYER_RADIUS;
+                const maxX = targetX + PLAYER_RADIUS;
+                const minY = camera.position.y - PLAYER_HEIGHT; 
+                const maxY = camera.position.y;
+                const minZ = camera.position.z - PLAYER_RADIUS;
+                const maxZ = camera.position.z + PLAYER_RADIUS;
+            
+                const startX = Math.floor(minX + 0.5) - 1;
+                const endX = Math.floor(maxX + 0.5) + 1;
+                const startY = Math.floor(minY);
+                const endY = Math.floor(maxY);
+                const startZ = Math.floor(minZ + 0.5) - 1;
+                const endZ = Math.floor(maxZ + 0.5) + 1;
+
+                let resolvedX = targetX;
+                let collidedX = false;
+
+                for (let bx = startX; bx <= endX; bx++) {
+                    for (let bz = startZ; bz <= endZ; bz++) {
+                        const colH = globalHeightMap.get(`${bx},${bz}`);
+                        if (colH === undefined) continue;
+
+                        const byMin = Math.max(startY, 0);
+                        const byMax = Math.min(endY, colH - 1);
+
+                        if (byMax < byMin) continue;
+
+                        for (let by = byMin; by <= byMax; by++) {
+                            const blockMinX = bx - BLOCK_HALF;
+                            const blockMaxX = bx + BLOCK_HALF;
+                            const blockMinY = by - BLOCK_HALF;
+                            const blockMaxY = by + BLOCK_HALF;
+                            const blockMinZ = bz - BLOCK_HALF;
+                            const blockMaxZ = bz + BLOCK_HALF;
+
+                            const overlapZ = overlapOnAxis(minZ, maxZ, blockMinZ, blockMaxZ);
+                            const overlapY = overlapOnAxis(minY, maxY, blockMinY, blockMaxY);
+                            
+                            const isWall = blockMaxY > (minY + STEP_HEIGHT);
+
+                            if (overlapZ > 0 && overlapY > 0.02 && isWall) { 
+                                const overlapX = overlapOnAxis(minX, maxX, blockMinX, blockMaxX);
+                                if (overlapX > 0) {
+                                    if (delta.x > 0) {
+                                        const candidateX = blockMinX - PLAYER_RADIUS - PLAYER_COLLISION_OFFSET;
+                                        resolvedX = Math.min(resolvedX, candidateX);
+                                    } else {
+                                        const candidateX = blockMaxX + PLAYER_RADIUS + PLAYER_COLLISION_OFFSET;
+                                        resolvedX = Math.max(resolvedX, candidateX);
+                                    }
+                                    collidedX = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                camera.position.x = resolvedX;
+                if (collidedX) {
+                    velocity.x = 0;
+                }
+            }
+
+            // Horizontal movement Z
+            if (delta.z !== 0) {
+                const targetZ = camera.position.z + delta.z;
+                const minX = camera.position.x - PLAYER_RADIUS;
+                const maxX = camera.position.x + PLAYER_RADIUS;
+                const minY = camera.position.y - PLAYER_HEIGHT;
+                const maxY = camera.position.y;
+                const minZ = targetZ - PLAYER_RADIUS;
+                const maxZ = targetZ + PLAYER_RADIUS;
+
+                const startX = Math.floor(minX + 0.5) - 1;
+                const endX = Math.floor(maxX + 0.5) + 1;
+                const startY = Math.floor(minY);
+                const endY = Math.floor(maxY);
+                const startZ = Math.floor(minZ + 0.5) - 1;
+                const endZ = Math.floor(maxZ + 0.5) + 1;
+
+                let resolvedZ = targetZ;
+                let collidedZ = false;
+
+                for (let bx = startX; bx <= endX; bx++) {
+                    for (let bz = startZ; bz <= endZ; bz++) {
+                        const colH = globalHeightMap.get(`${bx},${bz}`);
+                        if (colH === undefined) continue;
+
+                        const byMin = Math.max(startY, 0);
+                        const byMax = Math.min(endY, colH - 1);
+                        if (byMax < byMin) continue;
+
+                        for (let by = byMin; by <= byMax; by++) {
+                            const blockMinX = bx - BLOCK_HALF;
+                            const blockMaxX = bx + BLOCK_HALF;
+                            const blockMinY = by - BLOCK_HALF;
+                            const blockMaxY = by + BLOCK_HALF;
+                            const blockMinZ = bz - BLOCK_HALF;
+                            const blockMaxZ = bz + BLOCK_HALF;
+
+                            const overlapX = overlapOnAxis(minX, maxX, blockMinX, blockMaxX);
+                            const overlapY = overlapOnAxis(minY, maxY, blockMinY, blockMaxY);
+                            
+                            const isWall = blockMaxY > (minY + STEP_HEIGHT);
+
+                            if (overlapX > 0 && overlapY > 0.02 && isWall) { 
+                                const overlapZ = overlapOnAxis(minZ, maxZ, blockMinZ, blockMaxZ);
+                                if (overlapZ > 0) {
+                                    if (delta.z > 0) {
+                                        const candidateZ = blockMinZ - PLAYER_RADIUS - PLAYER_COLLISION_OFFSET;
+                                        resolvedZ = Math.min(resolvedZ, candidateZ);
+                                    } else {
+                                        const candidateZ = blockMaxZ + PLAYER_RADIUS + PLAYER_COLLISION_OFFSET;
+                                        resolvedZ = Math.max(resolvedZ, candidateZ);
+                                    }
+                                    collidedZ = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                camera.position.z = resolvedZ;
+                if (collidedZ) {
+                    velocity.z = 0;
+                }
+            }
+
+
+            // Vertical movement Y (gravity / jump)
+            if (delta.y !== 0) {
+                const targetY = camera.position.y + delta.y;
+                const minX = camera.position.x - PLAYER_RADIUS;
+                const maxX = camera.position.x + PLAYER_RADIUS;
+                const minY = targetY - PLAYER_HEIGHT;
+                const maxY = targetY;
+                const minZ = camera.position.z - PLAYER_RADIUS;
+                const maxZ = camera.position.z + PLAYER_RADIUS;
+
+                const startX = Math.floor(minX + 0.5) - 1;
+                const endX = Math.floor(maxX + 0.5) + 1;
+                const startZ = Math.floor(minZ + 0.5) - 1;
+                const endZ = Math.floor(maxZ + 0.5) + 1;
+                const startY = Math.floor(minY);
+                const endY = Math.floor(maxY);
+
+                let resolvedY = targetY;
+                let collidedBelow = false;
+                const centerX = camera.position.x;
+                const centerZ = camera.position.z;
+                
+                for (let bx = startX; bx <= endX; bx++) {
+                    for (let bz = startZ; bz <= endZ; bz++) {
+                        const colH = globalHeightMap.get(`${bx},${bz}`);
+                        if (colH === undefined) continue;
+
+                        const byMin = Math.max(0, startY);
+                        const byMax = Math.min(colH - 1, endY + 1);
+                        if (byMax < byMin) continue;
+
+                        for (let by = byMin; by <= byMax; by++) {
+                            const blockMinX = bx - BLOCK_HALF;
+                            const blockMaxX = bx + BLOCK_HALF;
+                            const blockMinY = by - BLOCK_HALF;
+                            const blockMaxY = by + BLOCK_HALF;
+                            const blockMinZ = bz - BLOCK_HALF;
+                            const blockMaxZ = bz + BLOCK_HALF;
+
+                            const overlapX = overlapOnAxis(minX, maxX, blockMinX, blockMaxX);
+                            const overlapZ = overlapOnAxis(minZ, maxZ, blockMinZ, blockMaxZ);
+
+                            if (overlapX > 0 && overlapZ > 0) {
+                                const overlapY = overlapOnAxis(minY, maxY, blockMinY, blockMaxY);
+                                if (overlapY > 0) {
+                                    if (delta.y > 0 && blockMinY > camera.position.y) {
+                                        // This is a "head bonk"
+                                        // The new check `blockMinY > camera.position.y` ensures
+                                        // we only collide with blocks *above our eyes*,
+                                        // not the floor or wall-base we are jumping past.
+                                        const candidateY = blockMinY - PLAYER_COLLISION_OFFSET;
+                                        resolvedY = Math.min(resolvedY, candidateY);
+                                        velocity.y = 0; 
+                                    } else if (delta.y < 0 && blockMaxY < camera.position.y - (PLAYER_HEIGHT * 0.5)) {
+                                        // This is a "landing"
+                                        const candidateY = blockMaxY + PLAYER_COLLISION_OFFSET + PLAYER_HEIGHT;
+                                        resolvedY = Math.max(resolvedY, candidateY);
+                                        collidedBelow = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                camera.position.y = resolvedY;
+
+                if (collidedBelow) {
+                    velocity.y = 0;
+                    moveState.canJump = true;
+                }
+            }
+        };
+
+        /**
+         * Animation loop (camera-relative movement)
+         */
         let prevTime = performance.now();
-        
+        const forwardVec = new THREE.Vector3();
+        const rightVec = new THREE.Vector3();
+        const moveVec = new THREE.Vector3();
+
         const animate = () => {
             requestAnimationFrame(animate);
-            
             stats.begin();
 
             const time = performance.now();
-            const delta = (time - prevTime) / 1000;
+            const delta = Math.min((time - prevTime) / 1000, 0.05);
 
             if (controls.isLocked) {
-                // Apply gravity
+                // Reset jump state at start of frame to ensure we only jump if grounded THIS frame
+                moveState.canJump = false;
+
+                // gravity
                 velocity.y -= GRAVITY * delta;
 
-                // Movement direction
-                direction.z = Number(moveState.backward) - Number(moveState.forward);
-                direction.x = Number(moveState.left) - Number(moveState.right);
-                direction.normalize();
-
-                // Calculate movement velocities
-                const moveX = -direction.x * MOVE_SPEED * delta;
-                const moveZ = -direction.z * MOVE_SPEED * delta;
-
-                // Store old position
-                const oldY = camera.position.y;
-
-                // Move the controls
-                controls.moveRight(moveX);
-                controls.moveForward(moveZ);
-
-                // Apply vertical movement (gravity/jump)
-                camera.position.y += velocity.y * delta;
-
-                // Ground collision with terrain height detection
-                const terrainHeight = getTerrainHeight(camera.position.x, camera.position.z);
-                const playerGroundLevel = terrainHeight + PLAYER_HEIGHT;
-                
-                const heightDifference = playerGroundLevel - camera.position.y;
-                
-                // If we're below or slightly above the ground
-                if (heightDifference > 0) {
-                    // If it's a small step, smoothly move up
-                    if (heightDifference <= STEP_HEIGHT && moveState.canJump) {
-                        camera.position.y += Math.min(heightDifference, STEP_HEIGHT * delta * 10);
-                        velocity.y = 0;
-                    }
-                    // If we're falling or landing
-                    else if (velocity.y <= 0) {
-                        camera.position.y = playerGroundLevel;
-                        velocity.y = 0;
-                        moveState.canJump = true;
+                // --- Acceleration/Friction block (Omitted for brevity - no changes) ---
+                camera.getWorldDirection(forwardVec);
+                forwardVec.y = 0;
+                forwardVec.normalize();
+                rightVec.crossVectors(forwardVec, new THREE.Vector3(0, 1, 0)).normalize();
+                const inputDir = new THREE.Vector3();
+                const f = (moveState.forward ? 1 : 0) - (moveState.backward ? 1 : 0);
+                const s = (moveState.right ? 1 : 0) - (moveState.left ? 1 : 0);
+                if (f !== 0 || s !== 0) {
+                    inputDir.add(forwardVec.clone().multiplyScalar(f));
+                    inputDir.add(rightVec.clone().multiplyScalar(s));
+                    inputDir.normalize();
+                }
+                const hVel = new THREE.Vector3(velocity.x, 0, velocity.z);
+                if (inputDir.lengthSq() > 0) {
+                    hVel.add(inputDir.clone().multiplyScalar(ACCELERATION * delta));
+                    if (hVel.lengthSq() > MAX_SPEED * MAX_SPEED) {
+                         hVel.normalize().multiplyScalar(MAX_SPEED);
                     }
                 } else {
-                    // We're in the air
-                    moveState.canJump = false;
+                    const speed = hVel.length();
+                    if (speed > 0) {
+                        const drop = speed * FRICTION * delta;
+                        const newSpeed = Math.max(0, speed - drop);
+                        if (newSpeed > 0) {
+                            hVel.multiplyScalar(newSpeed / speed);
+                        } else {
+                            hVel.set(0, 0, 0); 
+                        }
+                    }
+                }
+                velocity.x = hVel.x;
+                velocity.z = hVel.z;
+                moveVec.set(velocity.x * delta, 0, velocity.z * delta);
+                // --- End of Acceleration/Friction block ---
+
+
+                // Movement order
+                if (velocity.y < 0) {
+                    tryMoveAABB(new THREE.Vector3(0, velocity.y * delta, 0));
+                    tryMoveAABB(new THREE.Vector3(moveVec.x, 0, 0));
+                    tryMoveAABB(new THREE.Vector3(0, 0, moveVec.z));
+                } else {
+                    tryMoveAABB(new THREE.Vector3(moveVec.x, 0, 0));
+                    tryMoveAABB(new THREE.Vector3(0, 0, moveVec.z));
+                    tryMoveAABB(new THREE.Vector3(0, velocity.y * delta, 0));
                 }
 
                 // Stream chunks when entering a new chunk
@@ -328,33 +551,35 @@ export default function GameCanvas() {
             }
 
             renderer.render(scene, camera);
-            
+
             prevTime = time;
             stats.end();
         };
 
         animate();
 
-        // Handle window resize
+        /**
+         * Resize
+         * (Omitted for brevity - no changes)
+         */
         const handleResize = () => {
             if (!cameraRef.current || !rendererRef.current) return;
-            
             cameraRef.current.aspect = window.innerWidth / window.innerHeight;
             cameraRef.current.updateProjectionMatrix();
             rendererRef.current.setSize(window.innerWidth, window.innerHeight);
         };
-
         window.addEventListener('resize', handleResize);
 
-        // Cleanup
+        /**
+         * Cleanup
+         * (Omitted for brevity - no changes)
+         */
         return () => {
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('keydown', onKeyDown);
             document.removeEventListener('keyup', onKeyUp);
-            if (canvasRef.current) {
-                canvasRef.current.removeEventListener('click', onClick);
-            }
-            document.body.removeChild(stats.dom);
+            if (canvasRef.current) canvasRef.current.removeEventListener('click', onClick);
+            try { document.body.removeChild(stats.dom); } catch (e) {}
             renderer.dispose();
         };
     }, []);
