@@ -160,6 +160,7 @@ export default function GameCanvas() {
 
         // Chunk streaming around player
         const worldChunks = new Map<string, THREE.Group>();
+        const globalHeightMap = new Map<string, number>();
         const pendingLoads = new Set<string>();
         const keyOf = (cx: number, cz: number) => `${cx},${cz}`;
 
@@ -199,6 +200,16 @@ export default function GameCanvas() {
                 if (isWithinRenderDistance(cx, cz, lastCenterChunkX, lastCenterChunkZ)) {
                     scene.add(chunk);
                     worldChunks.set(id, chunk);
+
+                    // Populate global height map
+                    const hm = (chunk as any).userData?.heightMap;
+                    if (hm) {
+                        if (hm instanceof Map) {
+                            for (const [k, v] of hm.entries()) {
+                                globalHeightMap.set(k, v as number);
+                            }
+                        }
+                    }
                 } else {
                     // No longer needed
                     disposeChunk(chunk);
@@ -232,6 +243,18 @@ export default function GameCanvas() {
                     scene.remove(group);
                     disposeChunk(group);
                     toRemove.push(id);
+
+                    // Cleanup height map
+                    const [cxStr, czStr] = id.split(',');
+                    const cx = parseInt(cxStr);
+                    const cz = parseInt(czStr);
+                    for (let x = 0; x < CHUNK_SIZE; x++) {
+                        for (let z = 0; z < CHUNK_SIZE; z++) {
+                            const worldX = cx * CHUNK_SIZE + x;
+                            const worldZ = cz * CHUNK_SIZE + z;
+                            globalHeightMap.delete(`${worldX},${worldZ}`);
+                        }
+                    }
                 }
             });
             toRemove.forEach((id) => worldChunks.delete(id));
