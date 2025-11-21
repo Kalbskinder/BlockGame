@@ -9,6 +9,7 @@ export const splashTexts: SplashTextEntry[] = [
     { text: "Kalbskinder", fontSize: 2.2 },
     { text: "Typescript", fontSize: 2.2 },
     { text: "skinview3d", fontSize: 2.2 },
+    { text: "Hytale", fontSize: 2.2 },
     { text: "Browser Edition", fontSize: 1.9 },
     { text: "Uhm... Guys?", fontSize: 2.0 },
     { text: "helloWorld(\"print\");", fontSize: 1.8 },

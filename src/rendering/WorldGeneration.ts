@@ -4,7 +4,7 @@ import { WorldMetadata } from "../types/models";
 import * as THREE from "three";
 import { Block } from "./components/Block";
 
-const CHUNK_SIZE = 16;
+export const CHUNK_SIZE = 16;
 const NOISE_HEIGHT_SCALE = 0.045;
 const WORLD_HEIGHT = 64;
 
@@ -75,9 +75,14 @@ export class WorldGeneration {
         // Create materials with nearest filter for pixel-perfect look
         const textureLoader = new THREE.TextureLoader();
         
-        const grassTexture = textureLoader.load("/assets/game/blocks/grass.png");
-        grassTexture.magFilter = THREE.NearestFilter;
-        grassTexture.minFilter = THREE.NearestFilter;
+        // Grass block uses different textures per face: top (grass), bottom (dirt), sides (grass_side)
+        const grassTopTexture = textureLoader.load("/assets/game/blocks/grass.png");
+        grassTopTexture.magFilter = THREE.NearestFilter;
+        grassTopTexture.minFilter = THREE.NearestFilter;
+
+        const grassSideTexture = textureLoader.load("/assets/game/blocks/grass_side.png");
+        grassSideTexture.magFilter = THREE.NearestFilter;
+        grassSideTexture.minFilter = THREE.NearestFilter;
         
         const dirtTexture = textureLoader.load("/assets/game/blocks/dirt.png");
         dirtTexture.magFilter = THREE.NearestFilter;
@@ -87,7 +92,18 @@ export class WorldGeneration {
         stoneTexture.magFilter = THREE.NearestFilter;
         stoneTexture.minFilter = THREE.NearestFilter;
 
-        const grassMaterial = new THREE.MeshLambertMaterial({ map: grassTexture });
+        // Materials: order corresponds to BoxGeometry groups: +x, -x, +y (top), -y (bottom), +z, -z
+        const grassSideMaterial = new THREE.MeshLambertMaterial({ map: grassSideTexture });
+        const grassTopMaterial = new THREE.MeshLambertMaterial({ map: grassTopTexture });
+        const grassBottomMaterial = new THREE.MeshLambertMaterial({ map: dirtTexture });
+        const grassMaterials: THREE.MeshLambertMaterial[] = [
+            grassSideMaterial, // +x
+            grassSideMaterial, // -x
+            grassTopMaterial,  // +y (top)
+            grassBottomMaterial, // -y (bottom)
+            grassSideMaterial, // +z
+            grassSideMaterial  // -z
+        ];
         const dirtMaterial = new THREE.MeshLambertMaterial({ map: dirtTexture });
         const stoneMaterial = new THREE.MeshLambertMaterial({ map: stoneTexture });
 
@@ -95,7 +111,8 @@ export class WorldGeneration {
         const chunkGroup = new THREE.Group();
 
         if (grassBlocks.length > 0) {
-            const grassMesh = new THREE.InstancedMesh(grassGeometry, grassMaterial, grassBlocks.length);
+            // InstancedMesh supports an array of materials matching geometry groups
+            const grassMesh = new THREE.InstancedMesh(grassGeometry, grassMaterials, grassBlocks.length);
             grassBlocks.forEach((matrix, i) => grassMesh.setMatrixAt(i, matrix));
             chunkGroup.add(grassMesh);
         }
