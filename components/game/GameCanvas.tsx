@@ -517,7 +517,7 @@ export default function GameCanvas() {
                 // gravity
                 velocity.y -= GRAVITY * delta;
 
-                // --- Acceleration/Friction block (Omitted for brevity - no changes) ---
+                // --- Acceleration/Friction block ---
                 camera.getWorldDirection(forwardVec);
                 forwardVec.y = 0;
                 forwardVec.normalize();
@@ -583,7 +583,6 @@ export default function GameCanvas() {
 
         /**
          * Resize
-         * (Omitted for brevity - no changes)
          */
         const handleResize = () => {
             if (!cameraRef.current || !rendererRef.current) return;
@@ -595,7 +594,6 @@ export default function GameCanvas() {
 
         /**
          * Cleanup
-         * (Omitted for brevity - no changes)
          */
         return () => {
             window.removeEventListener('resize', handleResize);
