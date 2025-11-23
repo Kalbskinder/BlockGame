@@ -6,6 +6,8 @@ import { WorldGeneration, CHUNK_SIZE } from '@/src/rendering/WorldGeneration';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { EscapeScreen } from '../ui/game/EscapeScreen/EscapeScreen';
+import { LocalStorageHandler } from '@/src/utils/localStorageUtil';
+import { Settings } from '@/src/types/models';
 
 export default function GameCanvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,6 +16,9 @@ export default function GameCanvas() {
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<PointerLockControls | null>(null);
     const [escOpened, setEscOpened] = useState(false);
+
+    const renderDistanceRef = useRef(2);
+    const forceChunkUpdateRef = useRef(false);
     
     // Player movement
     const moveState = {
@@ -50,7 +55,6 @@ export default function GameCanvas() {
         const BLOCK_HALF = BLOCK_SIZE / 2;
         const GRAVITY = 30;
         const JUMP_VELOCITY = 8.5;
-        const RENDER_DISTANCE = 2;
         const STEP_HEIGHT = 0.5; 
         
         const MAX_SPEED = 4.0;
@@ -65,7 +69,7 @@ export default function GameCanvas() {
         sceneRef.current = scene;
 
         const camera = new THREE.PerspectiveCamera(
-            75,
+            70,
             window.innerWidth / window.innerHeight,
             0.1,
             1000
@@ -168,7 +172,7 @@ export default function GameCanvas() {
         let lastCenterChunkZ = Number.POSITIVE_INFINITY;
 
         const isWithinRenderDistance = (cx: number, cz: number, centerX: number, centerZ: number) =>
-            Math.abs(cx - centerX) <= RENDER_DISTANCE && Math.abs(cz - centerZ) <= RENDER_DISTANCE;
+            Math.abs(cx - centerX) <= renderDistanceRef.current && Math.abs(cz - centerZ) <= renderDistanceRef.current;
 
         const disposeChunk = (group: THREE.Group) => {
             group.traverse((obj) => {
@@ -227,8 +231,9 @@ export default function GameCanvas() {
 
             // Determine which chunks should be present
             const needed = new Set<string>();
-            for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
-                for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
+            const dist = renderDistanceRef.current;
+            for (let dx = -dist; dx <= dist; dx++) {
+                for (let dz = -dist; dz <= dist; dz++) {
                     const cx = centerX + dx;
                     const cz = centerZ + dz;
                     needed.add(keyOf(cx, cz));
@@ -568,7 +573,8 @@ export default function GameCanvas() {
                 // Stream chunks when entering a new chunk
                 const currentChunkX = Math.floor(camera.position.x / CHUNK_SIZE);
                 const currentChunkZ = Math.floor(camera.position.z / CHUNK_SIZE);
-                if (currentChunkX !== lastCenterChunkX || currentChunkZ !== lastCenterChunkZ) {
+                if (currentChunkX !== lastCenterChunkX || currentChunkZ !== lastCenterChunkZ || forceChunkUpdateRef.current) {
+                    forceChunkUpdateRef.current = false;
                     ensureChunksForCenter(currentChunkX, currentChunkZ);
                 }
             }
@@ -604,6 +610,27 @@ export default function GameCanvas() {
             renderer.dispose();
         };
     }, []);
+
+    useEffect(() => {
+        const updateSettings = async () => {
+            const data = await LocalStorageHandler.get('settings');
+            if (data) {
+                const s = JSON.parse(data) as Settings;
+                if (s.fov && cameraRef.current) {
+                    cameraRef.current.fov = s.fov;
+                    cameraRef.current.updateProjectionMatrix();
+                }
+                if (s.renderDistance) {
+                    renderDistanceRef.current = s.renderDistance;
+                    forceChunkUpdateRef.current = true;
+                }
+            }
+        };
+
+        if (!escOpened) {
+            updateSettings();
+        }
+    }, [escOpened]);
 
     return (
         <div>
