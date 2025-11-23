@@ -8,6 +8,8 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { EscapeScreen } from '../ui/game/EscapeScreen/EscapeScreen';
 import { LocalStorageHandler } from '@/src/utils/localStorageUtil';
 import { Settings } from '@/src/types/models';
+import Actionbar from './Actionbar/Actionbar';
+import Title from './Title/Title';
 
 export default function GameCanvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,6 +18,11 @@ export default function GameCanvas() {
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<PointerLockControls | null>(null);
     const [escOpened, setEscOpened] = useState(false);
+
+    const [actionbar, setActionbar] = useState<string | null>(null);
+    const [title, setTitle] = useState<string | null>(null);
+    const [subtitle, setSubtitle] = useState<string | null>(null);
+
 
     const renderDistanceRef = useRef(2);
     const forceChunkUpdateRef = useRef(false);
@@ -635,6 +642,11 @@ export default function GameCanvas() {
     return (
         <div>
             {escOpened && <EscapeScreen onClose={handleEscapeClose} />}
+
+            {/* BlockGame Overlay Components */}
+            {actionbar && <Actionbar text={actionbar} />}
+            {(title || subtitle) && <Title title={title || ''} subtitle={subtitle || ''} />}
+
             <canvas
                 ref={canvasRef}
                 style={{

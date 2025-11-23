@@ -1,0 +1,29 @@
+.actionbar {
+    display: none;
+    font-family: 'BG Regular', sans-serif;
+    font-size: 18px;
+    text-shadow: 2px 2px 0 #202013CC;
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    user-select: none;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.visible {
+    display: block;
+}
+
+.fade-out {
+    animation: fadeOut 0.5s forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}

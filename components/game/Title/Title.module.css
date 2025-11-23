@@ -1,0 +1,40 @@
+.title {
+    display: none;
+    font-family: 'BG Regular', sans-serif;
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    text-align: center;
+    transform: translate(-50%, 50%);
+    user-select: none;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.titleText {
+    font-size: 56px;
+    text-shadow: 6px 6px 0 #202013CC;
+}
+
+.subtitleText {
+    font-size: 34px;
+    text-shadow: 4px 4px 0 #202013CC;
+}
+
+.visible {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.fade-out {
+    animation: fadeOut 0.5s forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
