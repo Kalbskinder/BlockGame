@@ -52,7 +52,7 @@ export class WorldGeneration {
                 const worldX = chunkX * CHUNK_SIZE + x;
                 const worldZ = chunkZ * CHUNK_SIZE + z;
 
-                const height = Math.floor(noise.noise(worldX * NOISE_HEIGHT_SCALE, worldZ * 0.05) * 3 + 32);
+                const height = Math.floor(noise.noise(worldX * NOISE_HEIGHT_SCALE, worldZ * 0.09) * 3 + 32);
                 heightMap.set(`${worldX},${worldZ}`, height);
 
                 for (let y = 0; y < height; y++) {

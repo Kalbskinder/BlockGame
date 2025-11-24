@@ -18,6 +18,7 @@ export default function GameCanvas() {
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<PointerLockControls | null>(null);
     const [escOpened, setEscOpened] = useState(false);
+    const [isSprinting, setIsSprinting] = useState(false);
 
     const [actionbar, setActionbar] = useState<string | null>(null);
     const [title, setTitle] = useState<string | null>(null);
@@ -35,6 +36,8 @@ export default function GameCanvas() {
         right: false,
         jump: false,
         canJump: false,
+        shift: false,
+        isJumping: false,
     };
 
     const handleEscapeClose = () => {
@@ -44,6 +47,8 @@ export default function GameCanvas() {
         moveState.left = false;
         moveState.right = false;
         moveState.jump = false;
+        moveState.shift = false;
+        moveState.isJumping = false;
         setTimeout(() => {
             controlsRef.current?.lock();
         }, 100);
@@ -55,7 +60,10 @@ export default function GameCanvas() {
         /**
          * Constants
          */
-        const PLAYER_HEIGHT = 1.8;
+        const PLAYER_HEIGHT_STANDING = 1.8;
+        const PLAYER_HEIGHT_SNEAKING = 1.5;
+        let playerHeight = PLAYER_HEIGHT_STANDING;
+
         const PLAYER_RADIUS = 0.3; 
         const PLAYER_COLLISION_OFFSET = 0.001; 
         const BLOCK_SIZE = 1;
@@ -65,6 +73,8 @@ export default function GameCanvas() {
         const STEP_HEIGHT = 0.5; 
         
         const MAX_SPEED = 4.0;
+        const SPRINT_SPEED = 6.0;
+        const SNEAK_SPEED = 1.5;
         const ACCELERATION = 40.0;
         const FRICTION = 25.0; 
 
@@ -130,10 +140,19 @@ export default function GameCanvas() {
                     moveState.right = true;
                     break;
                 case 'Space':
+                    moveState.jump = true;
                     if (moveState.canJump) {
                         velocity.y = JUMP_VELOCITY;
                         moveState.canJump = false;
+                        moveState.isJumping = true;
                     }
+                    break;
+                case 'Controls':
+                    setIsSprinting(true);
+                    break;
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    moveState.shift = true;
                     break;
             }
         };
@@ -143,6 +162,7 @@ export default function GameCanvas() {
                 case 'ArrowUp':
                 case 'KeyW':
                     moveState.forward = false;
+                    if (isSprinting) setIsSprinting(false);
                     break;
                 case 'ArrowLeft':
                 case 'KeyA':
@@ -155,6 +175,13 @@ export default function GameCanvas() {
                 case 'ArrowRight':
                 case 'KeyD':
                     moveState.right = false;
+                    break;
+                case 'Space':
+                    moveState.jump = false;
+                    break;
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    moveState.shift = false;
                     break;
             }
         };
@@ -298,6 +325,43 @@ export default function GameCanvas() {
             return Math.max(0, Math.min(amax, bmax) - Math.max(amin, bmin));
         };
 
+        const checkGroundCollision = (x: number, y: number, z: number, height: number) => {
+            const minX = x - PLAYER_RADIUS;
+            const maxX = x + PLAYER_RADIUS;
+            const minZ = z - PLAYER_RADIUS;
+            const maxZ = z + PLAYER_RADIUS;
+            const checkY = y - height - 0.5; // Check deeper to handle height transitions
+
+            const startX = Math.floor(minX + 0.5) - 1;
+            const endX = Math.floor(maxX + 0.5) + 1;
+            const startZ = Math.floor(minZ + 0.5) - 1;
+            const endZ = Math.floor(maxZ + 0.5) + 1;
+            
+            const startY = Math.floor(checkY);
+            
+            for (let bx = startX; bx <= endX; bx++) {
+                for (let bz = startZ; bz <= endZ; bz++) {
+                    const colH = globalHeightMap.get(`${bx},${bz}`);
+                    if (colH === undefined) continue;
+                    
+                    if (startY < colH) {
+                         const blockMinX = bx - BLOCK_HALF;
+                         const blockMaxX = bx + BLOCK_HALF;
+                         const blockMinZ = bz - BLOCK_HALF;
+                         const blockMaxZ = bz + BLOCK_HALF;
+                         
+                         const overlapX = overlapOnAxis(minX, maxX, blockMinX, blockMaxX);
+                         const overlapZ = overlapOnAxis(minZ, maxZ, blockMinZ, blockMaxZ);
+                         
+                         if (overlapX > 0 && overlapZ > 0) {
+                             return true; // Supported
+                         }
+                    }
+                }
+            }
+            return false;
+        };
+
         /**
          * Core collision: per-axis movement with AABB checks against nearby blocks
          */
@@ -308,7 +372,7 @@ export default function GameCanvas() {
                 const targetX = camera.position.x + delta.x;
                 const minX = targetX - PLAYER_RADIUS;
                 const maxX = targetX + PLAYER_RADIUS;
-                const minY = camera.position.y - PLAYER_HEIGHT; 
+                const minY = camera.position.y - playerHeight; 
                 const maxY = camera.position.y;
                 const minZ = camera.position.z - PLAYER_RADIUS;
                 const maxZ = camera.position.z + PLAYER_RADIUS;
@@ -373,7 +437,7 @@ export default function GameCanvas() {
                 const targetZ = camera.position.z + delta.z;
                 const minX = camera.position.x - PLAYER_RADIUS;
                 const maxX = camera.position.x + PLAYER_RADIUS;
-                const minY = camera.position.y - PLAYER_HEIGHT;
+                const minY = camera.position.y - playerHeight;
                 const maxY = camera.position.y;
                 const minZ = targetZ - PLAYER_RADIUS;
                 const maxZ = targetZ + PLAYER_RADIUS;
@@ -438,7 +502,7 @@ export default function GameCanvas() {
                 const targetY = camera.position.y + delta.y;
                 const minX = camera.position.x - PLAYER_RADIUS;
                 const maxX = camera.position.x + PLAYER_RADIUS;
-                const minY = targetY - PLAYER_HEIGHT;
+                const minY = targetY - playerHeight;
                 const maxY = targetY;
                 const minZ = camera.position.z - PLAYER_RADIUS;
                 const maxZ = camera.position.z + PLAYER_RADIUS;
@@ -486,9 +550,9 @@ export default function GameCanvas() {
                                         const candidateY = blockMinY - PLAYER_COLLISION_OFFSET;
                                         resolvedY = Math.min(resolvedY, candidateY);
                                         velocity.y = 0; 
-                                    } else if (delta.y < 0 && blockMaxY < camera.position.y - (PLAYER_HEIGHT * 0.5)) {
+                                    } else if (delta.y < 0 && blockMaxY < camera.position.y - (playerHeight * 0.5)) {
                                         // This is a "landing"
-                                        const candidateY = blockMaxY + PLAYER_COLLISION_OFFSET + PLAYER_HEIGHT;
+                                        const candidateY = blockMaxY + PLAYER_COLLISION_OFFSET + playerHeight;
                                         resolvedY = Math.max(resolvedY, candidateY);
                                         collidedBelow = true;
                                     }
@@ -523,6 +587,10 @@ export default function GameCanvas() {
             const delta = Math.min((time - prevTime) / 1000, 0.05);
 
             if (controls.isLocked) {
+                if (moveState.canJump) {
+                    moveState.isJumping = false;
+                }
+                const wasGrounded = moveState.canJump;
                 // Reset jump state at start of frame to ensure we only jump if grounded THIS frame
                 moveState.canJump = false;
 
@@ -543,10 +611,11 @@ export default function GameCanvas() {
                     inputDir.normalize();
                 }
                 const hVel = new THREE.Vector3(velocity.x, 0, velocity.z);
+                const currentMaxSpeed = moveState.shift ? SNEAK_SPEED : (isSprinting ? SPRINT_SPEED : MAX_SPEED);
                 if (inputDir.lengthSq() > 0) {
                     hVel.add(inputDir.clone().multiplyScalar(ACCELERATION * delta));
-                    if (hVel.lengthSq() > MAX_SPEED * MAX_SPEED) {
-                         hVel.normalize().multiplyScalar(MAX_SPEED);
+                    if (hVel.lengthSq() > currentMaxSpeed * currentMaxSpeed) {
+                         hVel.normalize().multiplyScalar(currentMaxSpeed);
                     }
                 } else {
                     const speed = hVel.length();
@@ -565,6 +634,56 @@ export default function GameCanvas() {
                 moveVec.set(velocity.x * delta, 0, velocity.z * delta);
                 // --- End of Acceleration/Friction block ---
 
+                // Update player height
+                const targetHeight = moveState.shift ? PLAYER_HEIGHT_SNEAKING : PLAYER_HEIGHT_STANDING;
+                const HEIGHT_LERP = 10 * delta;
+                if (Math.abs(playerHeight - targetHeight) > 0.01) {
+                    playerHeight += (targetHeight - playerHeight) * HEIGHT_LERP;
+                } else {
+                    playerHeight = targetHeight;
+                }
+
+                // Edge check
+                if (moveState.shift && wasGrounded && !moveState.isJumping) {
+                    const px = camera.position.x;
+                    const py = camera.position.y;
+                    const pz = camera.position.z;
+
+                    // Try full movement
+                    if (moveVec.x !== 0 || moveVec.z !== 0) {
+                        if (checkGroundCollision(px + moveVec.x, py, pz + moveVec.z, playerHeight)) {
+                            // Safe to move
+                        } else {
+                            let xSafe = true;
+                            if (moveVec.x !== 0) {
+                                if (!checkGroundCollision(px + moveVec.x, py, pz, playerHeight)) {
+                                    moveVec.x = 0;
+                                    xSafe = false;
+                                }
+                            }
+                            
+                            if (moveVec.z !== 0) {
+                                // Check X only.
+                                const xOnlySafe = moveVec.x !== 0 && checkGroundCollision(px + moveVec.x, py, pz, playerHeight);
+                                // Check Z only.
+                                const zOnlySafe = moveVec.z !== 0 && checkGroundCollision(px, py, pz + moveVec.z, playerHeight);
+                                
+                                if (xOnlySafe && !zOnlySafe) {
+                                    moveVec.z = 0;
+                                } else if (!xOnlySafe && zOnlySafe) {
+                                    moveVec.x = 0;
+                                } else if (xOnlySafe && zOnlySafe) {
+                                    moveVec.x = 0;
+                                    moveVec.z = 0;
+                                } else {
+                                    // Both unsafe
+                                    moveVec.x = 0;
+                                    moveVec.z = 0;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Movement order
                 if (velocity.y < 0) {
