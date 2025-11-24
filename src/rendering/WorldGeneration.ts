@@ -2,7 +2,7 @@ import { SimplexNoise } from "three/examples/jsm/Addons.js";
 import { LocalStorageHandler } from "../utils/localStorageUtil";
 import { WorldMetadata } from "../types/models";
 import * as THREE from "three";
-import { Block } from "./components/Block";
+import { Blocks } from "./models/Blocks";
 
 export const CHUNK_SIZE = 16;
 const NOISE_HEIGHT_SCALE = 0.045;
@@ -41,9 +41,7 @@ export class WorldGeneration {
         const heightMap = new Map<string, number>();
         
         // Create merged geometries for each block type
-        const grassGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const dirtGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const stoneGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
 
         const grassBlocks: THREE.Matrix4[] = [];
         const dirtBlocks: THREE.Matrix4[] = [];
@@ -112,19 +110,19 @@ export class WorldGeneration {
 
         if (grassBlocks.length > 0) {
             // InstancedMesh supports an array of materials matching geometry groups
-            const grassMesh = new THREE.InstancedMesh(grassGeometry, grassMaterials, grassBlocks.length);
+            const grassMesh = new THREE.InstancedMesh(blockGeometry, grassMaterials, grassBlocks.length);
             grassBlocks.forEach((matrix, i) => grassMesh.setMatrixAt(i, matrix));
             chunkGroup.add(grassMesh);
         }
 
         if (dirtBlocks.length > 0) {
-            const dirtMesh = new THREE.InstancedMesh(dirtGeometry, dirtMaterial, dirtBlocks.length);
+            const dirtMesh = new THREE.InstancedMesh(blockGeometry, dirtMaterial, dirtBlocks.length);
             dirtBlocks.forEach((matrix, i) => dirtMesh.setMatrixAt(i, matrix));
             chunkGroup.add(dirtMesh);
         }
 
         if (stoneBlocks.length > 0) {
-            const stoneMesh = new THREE.InstancedMesh(stoneGeometry, stoneMaterial, stoneBlocks.length);
+            const stoneMesh = new THREE.InstancedMesh(blockGeometry, stoneMaterial, stoneBlocks.length);
             stoneBlocks.forEach((matrix, i) => stoneMesh.setMatrixAt(i, matrix));
             chunkGroup.add(stoneMesh);
         }

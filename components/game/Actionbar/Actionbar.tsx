@@ -1,4 +1,4 @@
-import { MinecraftTextUtil } from '@/src/utils/minecraftTextUtil';
+import { MinecraftTextUtil } from '@/src/utils/gameTextUtil';
 import styles from './Actionbar.module.css';
 import { useEffect, useState } from 'react';
 import { time } from 'console';
