@@ -150,13 +150,10 @@ export class PlayerHand {
             // Swing rotation
             const swing = Math.sin(this.swingProgress);
             
-            // Swing forward (reduce X from ~120deg to ~90deg)
+            // Swing animation
             this.mesh.rotation.x = this.defaultRotation.x - swing * 0.5;
             this.mesh.rotation.z = this.defaultRotation.z + swing * 0.3;
             this.mesh.rotation.y = this.defaultRotation.y + swing * 0.5;
-            
-            // Thrust forward
-            this.mesh.position.z = this.defaultPosition.z - swing * 0.2;
         } else {
              this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, this.defaultRotation.x, dt * 10);
              this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, this.defaultRotation.y, dt * 10);
