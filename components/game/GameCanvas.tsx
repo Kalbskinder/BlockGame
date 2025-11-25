@@ -10,6 +10,7 @@ import { LocalStorageHandler } from '@/src/utils/localStorageUtil';
 import { Settings } from '@/src/types/models';
 import Actionbar from './Actionbar/Actionbar';
 import Title from './Title/Title';
+import { PlayerHand } from '@/src/rendering/components/PlayerHand';
 
 export default function GameCanvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,6 +105,7 @@ export default function GameCanvas() {
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.autoClear = false;
         rendererRef.current = renderer;
 
         const stats = new Stats();
@@ -115,6 +117,21 @@ export default function GameCanvas() {
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(50, 100, 50);
         scene.add(directionalLight);
+
+        /**
+         * Hand Scene
+         */
+        const handScene = new THREE.Scene();
+        const handCamera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 10);
+        const playerHand = new PlayerHand();
+        handScene.add(playerHand.mesh);
+        
+        // Lighting for hand
+        const handAmbientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        handScene.add(handAmbientLight);
+        const handDirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        handDirLight.position.set(0, 1, 1);
+        handScene.add(handDirLight);
 
         /**
          * Input and velocity
@@ -195,6 +212,13 @@ export default function GameCanvas() {
             }
         };
         canvasRef.current.addEventListener('click', onClick);
+
+        const onMouseDown = () => {
+            if (controls.isLocked) {
+                playerHand.swing();
+            }
+        };
+        document.addEventListener('mousedown', onMouseDown);
 
         // Chunk streaming around player
         const worldChunks = new Map<string, THREE.Group>();
@@ -705,7 +729,15 @@ export default function GameCanvas() {
                 }
             }
 
+            // Update Hand
+            const hSpeed = velocity.x * velocity.x + velocity.z * velocity.z;
+            const isMoving = hSpeed > 0.05;
+            playerHand.update(delta, isMoving, isSprinting);
+
+            renderer.clear();
             renderer.render(scene, camera);
+            renderer.clearDepth();
+            renderer.render(handScene, handCamera);
 
             prevTime = time;
             stats.end();
@@ -720,6 +752,10 @@ export default function GameCanvas() {
             if (!cameraRef.current || !rendererRef.current) return;
             cameraRef.current.aspect = window.innerWidth / window.innerHeight;
             cameraRef.current.updateProjectionMatrix();
+            
+            handCamera.aspect = window.innerWidth / window.innerHeight;
+            handCamera.updateProjectionMatrix();
+
             rendererRef.current.setSize(window.innerWidth, window.innerHeight);
         };
         window.addEventListener('resize', handleResize);
@@ -731,6 +767,7 @@ export default function GameCanvas() {
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('keydown', onKeyDown);
             document.removeEventListener('keyup', onKeyUp);
+            document.removeEventListener('mousedown', onMouseDown);
             if (canvasRef.current) canvasRef.current.removeEventListener('click', onClick);
             try { document.body.removeChild(stats.dom); } catch (e) {}
             renderer.dispose();
