@@ -14,12 +14,12 @@ export class PlayerHand {
     private walkBob = 0;
     // Pivot is now at the shoulder (top of arm).
     // Position represents the shoulder position.
-    private defaultPosition = new THREE.Vector3(0.43, -0.75, -0.4);
+    private defaultPosition = new THREE.Vector3(0.5, -0.75, -0.4);
     
     // x: pitch, smaller value = more up
-    // y: yaw, left-right
-    // z: roll, tilt
-    private defaultRotation = new THREE.Euler(Math.PI / 1.49, Math.PI - 0.17, Math.PI * -0.09);
+    // y: yaw, left-right rotation (< = right, > = left)
+    // z: roll, left- right pointing
+    private defaultRotation = new THREE.Euler(Math.PI / 2.3, Math.PI + 1.03, Math.PI * -0.18);
 
     constructor() {
         // Arm geometry: 4x12x4 pixels
@@ -82,27 +82,19 @@ export class PlayerHand {
             uvAttribute.setXY(offset + 3, u1, v0);
         };
 
-        // Right Arm Skin Coordinates (Steve)
-        // Top: 44, 20, 4, 4
-        // Bottom: 48, 20, 4, 4
-        // Right: 40, 20, 4, 12
-        // Front: 44, 20, 4, 12
-        // Left: 48, 20, 4, 12
-        // Back: 52, 20, 4, 12
-
         // BoxGeometry Faces: +x, -x, +y, -y, +z, -z
         // 0: +x (Right) -> Skin Right (40, 20)
-        setFaceUV(0, 40, 20, 4, 12);
+        setFaceUV(0, 48, 20, 4, 12); // not visible
         // 1: -x (Left) -> Skin Left (48, 20)
-        setFaceUV(1, 48, 20, 4, 12);
+        setFaceUV(1, 40, 20, 4, 12); // right (outside) arm
         // 2: +y (Top) -> Skin Top (44, 16)
-        setFaceUV(2, 44, 16, 4, 4);
+        setFaceUV(2, 44, 16, 4, 4); // shoulder top
         // 3: -y (Bottom) -> Skin Bottom (48, 16)
-        setFaceUV(3, 48, 16, 4, 4);
+        setFaceUV(3, 48, 16, 4, 4); // not visible
         // 4: +z (Front) -> Skin Front (44, 20)
-        setFaceUV(4, 44, 20, 4, 12);
+        setFaceUV(4, 44, 20, 4, 12); // left (inside) arm
         // 5: -z (Back) -> Skin Back (52, 20)
-        setFaceUV(5, 52, 20, 4, 12);
+        setFaceUV(5, 52, 20, 4, 12); // not visible
         
         uvAttribute.needsUpdate = true;
     }

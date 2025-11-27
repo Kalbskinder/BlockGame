@@ -2,7 +2,6 @@ import { SimplexNoise } from "three/examples/jsm/Addons.js";
 import { LocalStorageHandler } from "../utils/localStorageUtil";
 import { WorldMetadata } from "../types/models";
 import * as THREE from "three";
-import { Blocks } from "./models/Blocks";
 
 export const CHUNK_SIZE = 16;
 const NOISE_HEIGHT_SCALE = 0.045;
